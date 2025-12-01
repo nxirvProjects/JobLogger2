@@ -9,7 +9,16 @@
 <body>
   <!-- Header -->
   <div class="gradient-header">
-    <h1>Job Application Tracker</h1>
+    <div class="header-content">
+      <h1>Job Application Tracker</h1>
+      <div class="header-badge">
+        <div class="header-badge-icon" id="badgeIcon">🏆</div>
+        <div class="header-badge-info">
+          <p class="header-badge-name" id="badgeName">No Badge</p>
+          <p class="header-badge-count" id="badgeCount">0 today</p>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- Tabs -->
@@ -76,6 +85,25 @@
   <!-- Stats View -->
   <div id="statsView" class="content hidden">
     <h2 class="section-header">Your Progress</h2>
+
+    <!-- Level/XP Card -->
+    <div class="stat-card level-card">
+      <div class="level-header">
+        <div>
+          <p class="level-title">
+            <span id="prestigeStars"></span><span id="levelTitle">Beginner Job Hunter</span>
+          </p>
+          <p class="level-number">Level <span id="levelNumber">1</span></p>
+        </div>
+        <div class="level-badge">📊</div>
+      </div>
+      <div class="xp-progress">
+        <div class="xp-bar">
+          <div class="xp-fill" id="xpFill"></div>
+        </div>
+        <p class="xp-text"><span id="currentXP">0</span> / <span id="nextLevelXP">100</span> XP</p>
+      </div>
+    </div>
 
     <!-- Streak Counter -->
     <div class="stat-card streak-card">

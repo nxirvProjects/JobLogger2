@@ -4,7 +4,10 @@ let links = [];
 let currentView = 'applications';
 let gamification = {
   streak: 0,
-  lastApplicationDate: null
+  lastApplicationDate: null,
+  level: 1,
+  xp: 0,
+  prestige: 0
 };
 
 // Initialize
@@ -18,7 +21,10 @@ async function loadData() {
   const result = await chrome.storage.sync.get(['applications', 'links', 'gamification', 'floatingButtonEnabled']);
   applications = result.applications || [];
   links = result.links || [];
-  gamification = result.gamification || { streak: 0, lastApplicationDate: null };
+  gamification = result.gamification || { streak: 0, lastApplicationDate: null, level: 1, xp: 0, prestige: 0 };
+
+  // Calculate level and XP based on total applications
+  updateLevelAndXP();
 
   // Set toggle state
   const toggle = document.getElementById('floatingButtonToggle');
@@ -474,6 +480,12 @@ function renderStats() {
 
   // Render simple stats
   renderSimpleStats();
+
+  // Render level and XP
+  renderLevelAndXP();
+
+  // Render daily badge
+  renderDailyBadge();
 }
 
 // Calculate and render simple stats
@@ -525,4 +537,140 @@ function renderSimpleStats() {
 async function toggleFloatingButton(e) {
   const enabled = e.target.checked;
   await chrome.storage.sync.set({ floatingButtonEnabled: enabled });
+}
+
+// Level and XP System
+
+// Calculate level and XP based on total applications
+function updateLevelAndXP() {
+  const totalApps = applications.length;
+  const totalXP = totalApps * 10; // 10 XP per application
+
+  // Calculate prestige (every 5000 XP = 1 prestige, which is 500 apps or 50 levels)
+  const prestige = Math.floor(totalXP / 5000);
+  const xpAfterPrestige = totalXP % 5000;
+
+  // Calculate level (100 XP per level, max 50 levels per prestige)
+  const level = Math.floor(xpAfterPrestige / 100) + 1;
+  const currentLevelXP = xpAfterPrestige % 100;
+
+  gamification.prestige = prestige;
+  gamification.level = level;
+  gamification.xp = currentLevelXP;
+}
+
+// Get level title based on level number
+function getLevelTitle(level) {
+  if (level >= 50) return "Legendary Job Hunter";
+  if (level >= 30) return "Career Seeker Elite";
+  if (level >= 20) return "Application Master";
+  if (level >= 10) return "Job Search Pro";
+  if (level >= 5) return "Active Applicant";
+  return "Beginner Job Hunter";
+}
+
+// Render level and XP
+function renderLevelAndXP() {
+  const levelNumber = document.getElementById('levelNumber');
+  const levelTitle = document.getElementById('levelTitle');
+  const prestigeStars = document.getElementById('prestigeStars');
+  const currentXP = document.getElementById('currentXP');
+  const nextLevelXP = document.getElementById('nextLevelXP');
+  const xpFill = document.getElementById('xpFill');
+
+  if (levelNumber) levelNumber.textContent = gamification.level;
+  if (levelTitle) levelTitle.textContent = getLevelTitle(gamification.level);
+
+  // Display prestige stars
+  if (prestigeStars) {
+    if (gamification.prestige > 0) {
+      prestigeStars.textContent = '⭐'.repeat(gamification.prestige) + ' ';
+    } else {
+      prestigeStars.textContent = '';
+    }
+  }
+
+  if (currentXP) currentXP.textContent = gamification.xp;
+  if (nextLevelXP) nextLevelXP.textContent = 100;
+
+  // Update progress bar
+  if (xpFill) {
+    const percentage = (gamification.xp / 100) * 100;
+    xpFill.style.width = `${percentage}%`;
+  }
+}
+
+// Daily Badge System
+
+// Calculate daily badge based on today's applications
+function calculateDailyBadge() {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const todayStr = today.toISOString().split('T')[0];
+
+  // Count applications from today
+  const todayApps = applications.filter(app => {
+    const appDate = new Date(app.date);
+    appDate.setHours(0, 0, 0, 0);
+    return appDate.toISOString().split('T')[0] === todayStr;
+  }).length;
+
+  // Determine badge based on count
+  let badge = {
+    name: 'No Badge Yet',
+    icon: '📝',
+    color: '#9ca3af'
+  };
+
+  if (todayApps >= 15) {
+    badge = { name: 'Legendary', icon: '⚡', color: '#8b5cf6' };
+  } else if (todayApps >= 10) {
+    badge = { name: 'Diamond', icon: '💠', color: '#06b6d4' };
+  } else if (todayApps >= 8) {
+    badge = { name: 'Platinum', icon: '💎', color: '#a855f7' };
+  } else if (todayApps >= 5) {
+    badge = { name: 'Gold', icon: '🥇', color: '#eab308' };
+  } else if (todayApps >= 3) {
+    badge = { name: 'Silver', icon: '🥈', color: '#94a3b8' };
+  } else if (todayApps >= 1) {
+    badge = { name: 'Bronze', icon: '🥉', color: '#c2410c' };
+  }
+
+  return { ...badge, count: todayApps };
+}
+
+// Render daily badge
+function renderDailyBadge() {
+  const badge = calculateDailyBadge();
+
+  const badgeIcon = document.getElementById('badgeIcon');
+  const badgeName = document.getElementById('badgeName');
+  const badgeCount = document.getElementById('badgeCount');
+
+  if (badgeIcon) {
+    badgeIcon.textContent = badge.icon;
+
+    // Add glow effect for higher badges (scaled for header)
+    if (badge.count >= 10) {
+      badgeIcon.style.filter = `drop-shadow(0 0 8px ${badge.color})`;
+      badgeIcon.style.fontSize = '40px';
+    } else if (badge.count >= 5) {
+      badgeIcon.style.filter = `drop-shadow(0 0 6px ${badge.color})`;
+      badgeIcon.style.fontSize = '36px';
+    } else if (badge.count >= 3) {
+      badgeIcon.style.filter = `drop-shadow(0 0 4px ${badge.color})`;
+      badgeIcon.style.fontSize = '34px';
+    } else {
+      badgeIcon.style.filter = 'none';
+      badgeIcon.style.fontSize = '32px';
+    }
+  }
+
+  if (badgeName) {
+    badgeName.textContent = badge.name;
+  }
+
+  if (badgeCount) {
+    badgeCount.textContent = `${badge.count} today`;
+  }
 }
