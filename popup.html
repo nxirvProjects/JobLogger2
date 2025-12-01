@@ -17,6 +17,7 @@
     <div class="tabs">
       <button id="tabApplications" class="tab active">Applications</button>
       <button id="tabLinks" class="tab">My Links</button>
+      <button id="tabStats" class="tab">Stats</button>
     </div>
   </div>
 
@@ -59,6 +60,46 @@
     <!-- Links List -->
     <div id="linksList" class="scrollable list">
       <!-- Links will be inserted here -->
+    </div>
+  </div>
+
+  <!-- Stats View -->
+  <div id="statsView" class="content hidden">
+    <h2 class="section-header">Your Progress</h2>
+
+    <!-- Streak Counter -->
+    <div class="stat-card streak-card">
+      <div class="streak-header">
+        <div class="streak-icon" id="streakIcon">🔥</div>
+        <div class="streak-info">
+          <h3>Current Streak</h3>
+          <p class="streak-count"><span id="streakCount">0</span> days</p>
+        </div>
+      </div>
+      <p class="streak-subtitle">Keep applying to maintain your streak!</p>
+    </div>
+
+    <!-- Simple Stats -->
+    <div class="stat-card simple-stats-card">
+      <h3 class="stats-title">Application Stats</h3>
+      <div class="stats-grid">
+        <div class="stat-item">
+          <p class="stat-label">This Week</p>
+          <p class="stat-value" id="statsThisWeek">0</p>
+        </div>
+        <div class="stat-item">
+          <p class="stat-label">This Month</p>
+          <p class="stat-value" id="statsThisMonth">0</p>
+        </div>
+        <div class="stat-item">
+          <p class="stat-label">Weekly Avg</p>
+          <p class="stat-value" id="statsWeeklyAvg">0</p>
+        </div>
+        <div class="stat-item">
+          <p class="stat-label">Total</p>
+          <p class="stat-value" id="statsTotal">0</p>
+        </div>
+      </div>
     </div>
   </div>
 

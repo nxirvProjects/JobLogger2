@@ -345,3 +345,99 @@
   input[type="file"] {
     display: none;
   }
+
+  /* Stats Cards */
+  .stat-card {
+    background: white;
+    border: 1.5px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 16px;
+    transition: all 0.2s ease;
+  }
+
+  .stat-card:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  }
+
+  /* Streak Card */
+  .streak-card {
+    background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%);
+    border-color: #fed7aa;
+  }
+
+  .streak-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 12px;
+  }
+
+  .streak-icon {
+    font-size: 50px;
+    transition: all 0.3s ease;
+  }
+
+  .streak-info h3 {
+    font-size: 14px;
+    font-weight: 600;
+    color: #9a3412;
+    margin-bottom: 4px;
+  }
+
+  .streak-count {
+    font-size: 32px;
+    font-weight: 800;
+    color: #ea580c;
+    margin: 0;
+  }
+
+  .streak-count span {
+    font-size: 32px;
+  }
+
+  .streak-subtitle {
+    font-size: 12px;
+    color: #9a3412;
+    margin: 0;
+    font-style: italic;
+  }
+
+  /* Simple Stats Card */
+  .simple-stats-card {
+    background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+    border-color: #bfdbfe;
+  }
+
+  .stats-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #1e40af;
+    margin-bottom: 16px;
+  }
+
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+  }
+
+  .stat-item {
+    text-align: center;
+  }
+
+  .stat-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: #1e40af;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 4px;
+  }
+
+  .stat-value {
+    font-size: 28px;
+    font-weight: 800;
+    color: #1d4ed8;
+    margin: 0;
+  }
