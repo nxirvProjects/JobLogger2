@@ -1,0 +1,347 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+  
+  body {
+    width: 420px;
+    height: 600px;
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    background: #f9fafb;
+  }
+  
+  /* Header */
+  .gradient-header {
+    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+    padding: 16px;
+    color: white;
+  }
+  
+  .gradient-header h1 {
+    font-size: 18px;
+    font-weight: 700;
+  }
+  
+  /* Tabs */
+  .tabs-container {
+    background: white;
+    border-bottom: 1px solid #e5e7eb;
+    padding: 12px 16px 8px 16px;
+  }
+  
+  .tabs {
+    display: flex;
+    gap: 8px;
+  }
+  
+  .tab {
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 13px;
+    cursor: pointer;
+    border: 1px solid #e5e7eb;
+    background: white;
+    color: #6b7280;
+    transition: all 0.2s ease;
+  }
+  
+  .tab:hover {
+    background: #f9fafb;
+  }
+  
+  .tab.active {
+    background: #6366f1;
+    color: white;
+    border-color: #6366f1;
+  }
+  
+  /* Content */
+  .content {
+    padding: 16px;
+  }
+  
+  .hidden {
+    display: none;
+  }
+  
+  /* Buttons */
+  .btn {
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 13px;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s ease;
+  }
+  
+  .btn-primary {
+    background: #10b981;
+    color: white;
+    flex: 1;
+  }
+  
+  .btn-primary:hover {
+    background: #059669;
+  }
+  
+  .btn-secondary {
+    background: white;
+    color: #374151;
+    border: 1px solid #d1d5db;
+  }
+  
+  .btn-secondary:hover {
+    background: #f9fafb;
+  }
+  
+  .btn-full {
+    width: 100%;
+    padding: 12px;
+  }
+  
+  /* Button Row */
+  .button-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+  
+  /* Search */
+  .search-input {
+    width: 100%;
+    padding: 10px 16px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 14px;
+    margin-bottom: 16px;
+  }
+  
+  .search-input:focus {
+    outline: none;
+    border-color: #6366f1;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+  }
+  
+  /* Stats */
+  .stats {
+    background: #eff6ff;
+    border: 1px solid #dbeafe;
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 16px;
+  }
+  
+  .stats p {
+    color: #1e40af;
+    font-weight: 600;
+    font-size: 14px;
+  }
+  
+  /* Section Header */
+  .section-header {
+    font-size: 11px;
+    font-weight: 700;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 8px;
+  }
+  
+  /* Scrollable List */
+  .scrollable {
+    max-height: 420px;
+    overflow-y: auto;
+  }
+  
+  .scrollable::-webkit-scrollbar {
+    width: 6px;
+  }
+  
+  .scrollable::-webkit-scrollbar-thumb {
+    background: #d1d5db;
+    border-radius: 3px;
+  }
+  
+  .list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  
+  /* Application Card */
+  .app-card {
+    background: white;
+    border: 1.5px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 16px;
+    transition: all 0.2s ease;
+  }
+  
+  .app-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  }
+  
+  .app-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 8px;
+  }
+  
+  .app-card-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  
+  .color-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+  }
+  
+  .color-blue { background: #3b82f6; }
+  .color-purple { background: #8b5cf6; }
+  .color-green { background: #10b981; }
+  .color-pink { background: #ec4899; }
+  .color-amber { background: #f59e0b; }
+  
+  .app-card h3 {
+    font-size: 14px;
+    font-weight: 700;
+    color: #111827;
+  }
+  
+  .app-card-actions {
+    display: flex;
+    gap: 4px;
+  }
+  
+  .icon-btn {
+    padding: 4px 8px;
+    font-size: 11px;
+    border-radius: 4px;
+    border: 1px solid #e5e7eb;
+    background: white;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  
+  .icon-btn.edit {
+    color: #6366f1;
+  }
+  
+  .icon-btn.edit:hover {
+    background: #eef2ff;
+  }
+  
+  .icon-btn.delete {
+    color: #dc2626;
+  }
+  
+  .icon-btn.delete:hover {
+    background: #fef2f2;
+  }
+  
+  .app-card-role {
+    font-size: 13px;
+    color: #4b5563;
+    margin-bottom: 8px;
+  }
+  
+  .app-card-date {
+    font-size: 11px;
+    color: #9ca3af;
+    margin-bottom: 4px;
+  }
+  
+  .app-card-url {
+    font-size: 11px;
+    color: #3b82f6;
+    text-decoration: none;
+    word-break: break-all;
+  }
+  
+  .app-card-url:hover {
+    text-decoration: underline;
+  }
+  
+  /* Link Card */
+  .link-card {
+    background: white;
+    border: 1.5px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 16px;
+    transition: all 0.2s ease;
+  }
+  
+  .link-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  }
+  
+  .link-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 8px;
+  }
+  
+  .link-card h3 {
+    font-size: 13px;
+    font-weight: 700;
+    color: #111827;
+  }
+  
+  .link-card-actions {
+    display: flex;
+    gap: 4px;
+  }
+  
+  .link-card-url {
+    font-size: 11px;
+    color: #3b82f6;
+    margin-bottom: 12px;
+    word-break: break-all;
+  }
+  
+  .copy-btn {
+    width: 100%;
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    color: #2563eb;
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  
+  .copy-btn:hover {
+    background: #dbeafe;
+  }
+  
+  /* Empty State */
+  .empty-state {
+    text-align: center;
+    padding: 32px 16px;
+    color: #9ca3af;
+    font-size: 14px;
+  }
+  
+  .description {
+    font-size: 13px;
+    color: #6b7280;
+    margin-bottom: 16px;
+  }
+  
+  /* Hidden */
+  input[type="file"] {
+    display: none;
+  }

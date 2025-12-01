@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Job Application Tracker</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <!-- Header -->
+  <div class="gradient-header">
+    <h1>Job Application Tracker</h1>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs-container">
+    <div class="tabs">
+      <button id="tabApplications" class="tab active">Applications</button>
+      <button id="tabLinks" class="tab">My Links</button>
+    </div>
+  </div>
+
+  <!-- Applications View -->
+  <div id="applicationsView" class="content">
+    <!-- Action Buttons -->
+    <div class="button-row">
+      <button id="logCurrentBtn" class="btn btn-primary">+ Log Current</button>
+      <button id="importBtn" class="btn btn-secondary">Import CSV</button>
+      <button id="exportBtn" class="btn btn-secondary">Export CSV</button>
+    </div>
+
+    <!-- Search Bar -->
+    <input 
+      type="text" 
+      id="searchInput" 
+      placeholder="Search by company or role..." 
+      class="search-input"
+    >
+
+    <!-- Stats -->
+    <div class="stats">
+      <p>Total Applications: <span id="totalCount">0</span></p>
+    </div>
+
+    <!-- Applications List -->
+    <h2 class="section-header">Recent Applications</h2>
+    <div id="applicationsList" class="scrollable list">
+      <!-- Applications will be inserted here -->
+    </div>
+  </div>
+
+  <!-- My Links View -->
+  <div id="linksView" class="content hidden">
+    <!-- Add Link Button -->
+    <button id="addLinkBtn" class="btn btn-primary btn-full">+ Add New Link</button>
+
+    <p class="description">Save your frequently used links for quick access</p>
+
+    <!-- Links List -->
+    <div id="linksList" class="scrollable list">
+      <!-- Links will be inserted here -->
+    </div>
+  </div>
+
+  <!-- Hidden file input for CSV import -->
+  <input type="file" id="csvFileInput" accept=".csv">
+
+  <script src="popup.js"></script>
+</body>
+</html>
