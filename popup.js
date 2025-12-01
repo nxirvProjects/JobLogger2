@@ -15,10 +15,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Load data from chrome storage
 async function loadData() {
-  const result = await chrome.storage.sync.get(['applications', 'links', 'gamification']);
+  const result = await chrome.storage.sync.get(['applications', 'links', 'gamification', 'floatingButtonEnabled']);
   applications = result.applications || [];
   links = result.links || [];
   gamification = result.gamification || { streak: 0, lastApplicationDate: null };
+
+  // Set toggle state
+  const toggle = document.getElementById('floatingButtonToggle');
+  if (toggle) {
+    toggle.checked = result.floatingButtonEnabled || false;
+  }
+
   renderApplications();
   renderLinks();
   updateStats();
@@ -49,6 +56,9 @@ function setupEventListeners() {
   document.getElementById('tabApplications').addEventListener('click', () => switchTab('applications'));
   document.getElementById('tabLinks').addEventListener('click', () => switchTab('links'));
   document.getElementById('tabStats').addEventListener('click', () => switchTab('stats'));
+
+  // Floating button toggle
+  document.getElementById('floatingButtonToggle').addEventListener('change', toggleFloatingButton);
 
   // Applications actions
   document.getElementById('logCurrentBtn').addEventListener('click', logCurrentJob);
@@ -509,4 +519,10 @@ function renderSimpleStats() {
   if (statsThisMonth) statsThisMonth.textContent = thisMonth;
   if (statsWeeklyAvg) statsWeeklyAvg.textContent = weeklyAvg;
   if (statsTotal) statsTotal.textContent = applications.length;
+}
+
+// Toggle floating button
+async function toggleFloatingButton(e) {
+  const enabled = e.target.checked;
+  await chrome.storage.sync.set({ floatingButtonEnabled: enabled });
 }

@@ -5,9 +5,21 @@
     "description": "Track your job applications across LinkedIn, Indeed, and other job sites",
     "permissions": [
       "storage",
-      "activeTab"
+      "activeTab",
+      "scripting"
+    ],
+    "host_permissions": [
+      "<all_urls>"
     ],
     "action": {
       "default_popup": "popup.html"
-    }
+    },
+    "content_scripts": [
+      {
+        "matches": ["<all_urls>"],
+        "js": ["content.js"],
+        "css": ["content.css"],
+        "run_at": "document_end"
+      }
+    ]
   }
