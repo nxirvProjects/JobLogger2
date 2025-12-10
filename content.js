@@ -8,7 +8,7 @@ let isEnabled = false;
   console.log('Job Logger content script loaded');
 
   // Check if floating button is enabled
-  const result = await chrome.storage.sync.get(['floatingButtonEnabled']);
+  const result = await chrome.storage.local.get(['floatingButtonEnabled']);
   isEnabled = result.floatingButtonEnabled || false;
 
   console.log('Floating button enabled:', isEnabled);
@@ -196,7 +196,7 @@ async function saveApplicationDirect(company, role, url) {
   };
 
   // Get existing applications
-  const result = await chrome.storage.sync.get(['applications', 'gamification']);
+  const result = await chrome.storage.local.get(['applications', 'gamification']);
   const applications = result.applications || [];
   const gamification = result.gamification || { streak: 0, lastApplicationDate: null };
 
@@ -229,7 +229,7 @@ async function saveApplicationDirect(company, role, url) {
   }
 
   // Save to storage
-  await chrome.storage.sync.set({ applications, gamification });
+  await chrome.storage.local.set({ applications, gamification });
 
   // Show success notification
   showNotification(company, role);

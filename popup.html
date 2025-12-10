@@ -144,6 +144,18 @@
   <!-- Hidden file input for CSV import -->
   <input type="file" id="csvFileInput" accept=".csv">
 
+  <!-- Custom Modal -->
+  <div id="customModal" class="custom-modal">
+    <div class="custom-modal-content">
+      <h3 id="modalTitle" class="modal-title"></h3>
+      <p id="modalMessage" class="modal-message"></p>
+      <input type="text" id="modalInput" class="modal-input" style="display: none;">
+      <div id="modalButtons" class="modal-buttons">
+        <!-- Buttons will be dynamically inserted -->
+      </div>
+    </div>
+  </div>
+
   <script src="popup.js"></script>
 </body>
 </html>

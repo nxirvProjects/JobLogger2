@@ -10,6 +10,128 @@ let gamification = {
   prestige: 0
 };
 
+// Custom Modal Functions
+function showCustomModal(title, message, type = 'alert', defaultValue = '') {
+  return new Promise((resolve) => {
+    const modal = document.getElementById('customModal');
+    const modalTitle = document.getElementById('modalTitle');
+    const modalMessage = document.getElementById('modalMessage');
+    const modalInput = document.getElementById('modalInput');
+    const modalButtons = document.getElementById('modalButtons');
+
+    // Set content
+    modalTitle.textContent = title;
+    modalMessage.textContent = message;
+
+    // Clear previous buttons
+    modalButtons.innerHTML = '';
+
+    if (type === 'prompt') {
+      // Show input field
+      modalInput.style.display = 'block';
+      modalInput.value = defaultValue;
+      modalInput.focus();
+
+      // Create buttons
+      const cancelBtn = document.createElement('button');
+      cancelBtn.textContent = 'Cancel';
+      cancelBtn.className = 'modal-btn modal-btn-secondary';
+      cancelBtn.onclick = () => {
+        modal.classList.remove('show');
+        resolve(null);
+      };
+
+      const okBtn = document.createElement('button');
+      okBtn.textContent = 'OK';
+      okBtn.className = 'modal-btn modal-btn-primary';
+      okBtn.onclick = () => {
+        modal.classList.remove('show');
+        resolve(modalInput.value);
+      };
+
+      modalButtons.appendChild(cancelBtn);
+      modalButtons.appendChild(okBtn);
+
+      // Handle Enter key
+      modalInput.onkeydown = (e) => {
+        if (e.key === 'Enter') {
+          modal.classList.remove('show');
+          resolve(modalInput.value);
+        } else if (e.key === 'Escape') {
+          modal.classList.remove('show');
+          resolve(null);
+        }
+      };
+    } else if (type === 'confirm') {
+      // Hide input field
+      modalInput.style.display = 'none';
+
+      // Create buttons
+      const cancelBtn = document.createElement('button');
+      cancelBtn.textContent = 'Cancel';
+      cancelBtn.className = 'modal-btn modal-btn-secondary';
+      cancelBtn.onclick = () => {
+        modal.classList.remove('show');
+        resolve(false);
+      };
+
+      const okBtn = document.createElement('button');
+      okBtn.textContent = 'Confirm';
+      okBtn.className = 'modal-btn modal-btn-danger';
+      okBtn.onclick = () => {
+        modal.classList.remove('show');
+        resolve(true);
+      };
+
+      modalButtons.appendChild(cancelBtn);
+      modalButtons.appendChild(okBtn);
+    } else if (type === 'alert') {
+      // Hide input field
+      modalInput.style.display = 'none';
+
+      // Create button
+      const okBtn = document.createElement('button');
+      okBtn.textContent = 'OK';
+      okBtn.className = 'modal-btn modal-btn-primary modal-btn-full';
+      okBtn.onclick = () => {
+        modal.classList.remove('show');
+        resolve(true);
+      };
+
+      modalButtons.appendChild(okBtn);
+    }
+
+    // Show modal
+    modal.classList.add('show');
+
+    // Focus appropriate element
+    if (type === 'prompt') {
+      setTimeout(() => modalInput.focus(), 100);
+    }
+
+    // Close on background click
+    modal.onclick = (e) => {
+      if (e.target === modal) {
+        modal.classList.remove('show');
+        resolve(type === 'prompt' ? null : false);
+      }
+    };
+  });
+}
+
+// Helper functions for different modal types
+async function customPrompt(message, defaultValue = '') {
+  return await showCustomModal('Input Required', message, 'prompt', defaultValue);
+}
+
+async function customConfirm(message) {
+  return await showCustomModal('Confirm Action', message, 'confirm');
+}
+
+async function customAlert(message) {
+  return await showCustomModal('Notification', message, 'alert');
+}
+
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
   loadData();
@@ -18,7 +140,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Load data from chrome storage
 async function loadData() {
-  const result = await chrome.storage.sync.get(['applications', 'links', 'gamification', 'floatingButtonEnabled']);
+  const result = await chrome.storage.local.get(['applications', 'links', 'gamification', 'floatingButtonEnabled']);
   applications = result.applications || [];
   links = result.links || [];
   gamification = result.gamification || { streak: 0, lastApplicationDate: null, level: 1, xp: 0, prestige: 0 };
@@ -41,18 +163,18 @@ async function loadData() {
 
 // Save data to chrome storage
 async function saveApplications() {
-  await chrome.storage.sync.set({ applications });
+  await chrome.storage.local.set({ applications });
   renderApplications();
   updateStats();
 }
 
 async function saveLinks() {
-  await chrome.storage.sync.set({ links });
+  await chrome.storage.local.set({ links });
   renderLinks();
 }
 
 async function saveGamification() {
-  await chrome.storage.sync.set({ gamification });
+  await chrome.storage.local.set({ gamification });
   renderStats();
 }
 
@@ -111,11 +233,11 @@ function switchTab(tab) {
 // Log current job
 async function logCurrentJob() {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-  
-  const company = prompt('Company name:');
+
+  const company = await customPrompt('Company name:');
   if (!company) return;
-  
-  const role = prompt('Role/Job title:');
+
+  const role = await customPrompt('Role/Job title:');
   if (!role) return;
 
   const application = {
@@ -181,17 +303,17 @@ function createApplicationCard(app) {
 }
 
 // Edit application
-function editApplication(id) {
+async function editApplication(id) {
   const app = applications.find(a => a.id === id);
   if (!app) return;
 
-  const company = prompt('Company name:', app.company);
+  const company = await customPrompt('Company name:', app.company);
   if (company === null) return;
 
-  const role = prompt('Role/Job title:', app.role);
+  const role = await customPrompt('Role/Job title:', app.role);
   if (role === null) return;
 
-  const url = prompt('Job URL:', app.url);
+  const url = await customPrompt('Job URL:', app.url);
   if (url === null) return;
 
   app.company = company;
@@ -202,8 +324,9 @@ function editApplication(id) {
 }
 
 // Delete application
-function deleteApplication(id) {
-  if (!confirm('Are you sure you want to delete this application?')) return;
+async function deleteApplication(id) {
+  const confirmed = await customConfirm('Are you sure you want to delete this application?');
+  if (!confirmed) return;
   applications = applications.filter(a => a.id !== id);
   saveApplications();
 }
@@ -219,15 +342,15 @@ function updateStats() {
 }
 
 // CSV Import
-function importFromCSV(e) {
+async function importFromCSV(e) {
   const file = e.target.files[0];
   if (!file) return;
 
   const reader = new FileReader();
-  reader.onload = (event) => {
+  reader.onload = async (event) => {
     const csv = event.target.result;
     const lines = csv.split('\n').filter(line => line.trim());
-    
+
     // Skip header row
     for (let i = 1; i < lines.length; i++) {
       const parts = lines[i].split(',').map(p => p.trim().replace(/^"|"$/g, ''));
@@ -241,19 +364,22 @@ function importFromCSV(e) {
         });
       }
     }
-    
-    saveApplications();
-    alert('CSV imported successfully!');
+
+    // Recalculate level and XP based on new total
+    updateLevelAndXP();
+    await saveApplications();
+    await saveGamification();
+    await customAlert('CSV imported successfully!');
   };
-  
+
   reader.readAsText(file);
   e.target.value = ''; // Reset input
 }
 
 // CSV Export
-function exportToCSV() {
+async function exportToCSV() {
   if (applications.length === 0) {
-    alert('No applications to export!');
+    await customAlert('No applications to export!');
     return;
   }
 
@@ -266,7 +392,7 @@ function exportToCSV() {
   ]);
 
   const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
-  
+
   const blob = new Blob([csv], { type: 'text/csv' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -277,11 +403,11 @@ function exportToCSV() {
 }
 
 // Links functionality
-function addNewLink() {
-  const label = prompt('Link label (e.g., "LinkedIn Profile"):');
+async function addNewLink() {
+  const label = await customPrompt('Link label (e.g., "LinkedIn Profile"):');
   if (!label) return;
 
-  const url = prompt('URL:');
+  const url = await customPrompt('URL:');
   if (!url) return;
 
   links.push({
@@ -329,20 +455,20 @@ function createLinkCard(link) {
   `;
 }
 
-function copyToClipboard(text) {
-  navigator.clipboard.writeText(text).then(() => {
-    alert('Copied to clipboard!');
+async function copyToClipboard(text) {
+  navigator.clipboard.writeText(text).then(async () => {
+    await customAlert('Copied to clipboard!');
   });
 }
 
-function editLink(id) {
+async function editLink(id) {
   const link = links.find(l => l.id === id);
   if (!link) return;
 
-  const label = prompt('Link label:', link.label);
+  const label = await customPrompt('Link label:', link.label);
   if (label === null) return;
 
-  const url = prompt('URL:', link.url);
+  const url = await customPrompt('URL:', link.url);
   if (url === null) return;
 
   link.label = label;
@@ -351,8 +477,9 @@ function editLink(id) {
   saveLinks();
 }
 
-function deleteLink(id) {
-  if (!confirm('Are you sure you want to delete this link?')) return;
+async function deleteLink(id) {
+  const confirmed = await customConfirm('Are you sure you want to delete this link?');
+  if (!confirmed) return;
   links = links.filter(l => l.id !== id);
   saveLinks();
 }
@@ -536,7 +663,7 @@ function renderSimpleStats() {
 // Toggle floating button
 async function toggleFloatingButton(e) {
   const enabled = e.target.checked;
-  await chrome.storage.sync.set({ floatingButtonEnabled: enabled });
+  await chrome.storage.local.set({ floatingButtonEnabled: enabled });
 }
 
 // Level and XP System
