@@ -166,6 +166,7 @@ async function saveApplications() {
   await chrome.storage.local.set({ applications });
   renderApplications();
   updateStats();
+  renderDailyBadge(); // Update the daily badge
 }
 
 async function saveLinks() {
@@ -351,17 +352,33 @@ async function importFromCSV(e) {
     const csv = event.target.result;
     const lines = csv.split('\n').filter(line => line.trim());
 
+    let validCount = 0;
+    let invalidCount = 0;
+
     // Skip header row
     for (let i = 1; i < lines.length; i++) {
-      const parts = lines[i].split(',').map(p => p.trim().replace(/^"|"$/g, ''));
+      // Better CSV parsing that handles quoted fields
+      const parts = parseCSVLine(lines[i]);
+
       if (parts.length >= 3) {
+        // Validate the date before adding
+        const dateStr = parts[2]?.trim() || new Date().toISOString();
+        const testDate = new Date(dateStr);
+
+        if (isNaN(testDate.getTime())) {
+          invalidCount++;
+          console.warn(`Skipping row ${i + 1}: Invalid date "${dateStr}"`);
+          continue;
+        }
+
         applications.push({
           id: Date.now() + i,
-          company: parts[0],
-          role: parts[1],
-          date: parts[2] || new Date().toISOString(),
-          url: parts[3] || ''
+          company: parts[0]?.trim() || '',
+          role: parts[1]?.trim() || '',
+          date: dateStr,
+          url: parts[3]?.trim() || ''
         });
+        validCount++;
       }
     }
 
@@ -369,11 +386,49 @@ async function importFromCSV(e) {
     updateLevelAndXP();
     await saveApplications();
     await saveGamification();
-    await customAlert('CSV imported successfully!');
+
+    const message = invalidCount > 0
+      ? `CSV imported! ${validCount} valid rows, ${invalidCount} skipped (invalid dates).`
+      : `CSV imported successfully! ${validCount} applications added.`;
+    await customAlert(message);
   };
 
   reader.readAsText(file);
   e.target.value = ''; // Reset input
+}
+
+// Parse a CSV line properly handling quoted fields
+function parseCSVLine(line) {
+  const result = [];
+  let current = '';
+  let inQuotes = false;
+
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+    const nextChar = line[i + 1];
+
+    if (char === '"') {
+      if (inQuotes && nextChar === '"') {
+        // Escaped quote
+        current += '"';
+        i++;
+      } else {
+        // Toggle quote mode
+        inQuotes = !inQuotes;
+      }
+    } else if (char === ',' && !inQuotes) {
+      // Field separator
+      result.push(current);
+      current = '';
+    } else {
+      current += char;
+    }
+  }
+
+  // Push the last field
+  result.push(current);
+
+  return result;
 }
 
 // CSV Export
@@ -497,8 +552,10 @@ function updateStreak() {
   // Get unique dates of applications (only the date part, ignore time)
   const dates = applications.map(app => {
     const date = new Date(app.date);
+    // Skip invalid dates
+    if (isNaN(date.getTime())) return null;
     return new Date(date.getFullYear(), date.getMonth(), date.getDate()).toISOString().split('T')[0];
-  }).sort().reverse();
+  }).filter(d => d !== null).sort().reverse();
 
   const uniqueDates = [...new Set(dates)];
 
@@ -521,13 +578,18 @@ function updateStreak() {
   // If last application was more than 1 day ago, streak is broken
   if (daysDiff > 1) {
     gamification.streak = 0;
-    gamification.lastApplicationDate = null;
+    gamification.lastApplicationDate = uniqueDates[0];
     return;
   }
 
-  // Count consecutive days
+  // Count consecutive days starting from today or yesterday
   let streak = 0;
   let currentDate = new Date(today);
+
+  // If no app today, start checking from yesterday
+  if (!uniqueDates.includes(todayStr)) {
+    currentDate.setDate(currentDate.getDate() - 1);
+  }
 
   for (let i = 0; i < uniqueDates.length; i++) {
     const checkDate = currentDate.toISOString().split('T')[0];
@@ -631,21 +693,26 @@ function renderSimpleStats() {
   // Calculate this week's applications
   const thisWeek = applications.filter(app => {
     const appDate = new Date(app.date);
+    if (isNaN(appDate.getTime())) return false;
     return appDate >= startOfWeek;
   }).length;
 
   // Calculate this month's applications
   const thisMonth = applications.filter(app => {
     const appDate = new Date(app.date);
+    if (isNaN(appDate.getTime())) return false;
     return appDate >= startOfMonth;
   }).length;
 
   // Calculate weekly average
   let weeklyAvg = 0;
   if (applications.length > 0) {
-    const oldestApp = new Date(Math.min(...applications.map(app => new Date(app.date))));
-    const weeksSinceStart = Math.max(1, Math.ceil((now - oldestApp) / (7 * 24 * 60 * 60 * 1000)));
-    weeklyAvg = (applications.length / weeksSinceStart).toFixed(1);
+    const dates = applications.map(app => new Date(app.date).getTime()).filter(time => !isNaN(time));
+    if (dates.length > 0) {
+      const oldestApp = new Date(Math.min(...dates));
+      const weeksSinceStart = Math.max(1, Math.ceil((now - oldestApp) / (7 * 24 * 60 * 60 * 1000)));
+      weeklyAvg = (applications.length / weeksSinceStart).toFixed(1);
+    }
   }
 
   // Update DOM
@@ -738,6 +805,8 @@ function calculateDailyBadge() {
   // Count applications from today
   const todayApps = applications.filter(app => {
     const appDate = new Date(app.date);
+    // Skip invalid dates
+    if (isNaN(appDate.getTime())) return false;
     appDate.setHours(0, 0, 0, 0);
     return appDate.toISOString().split('T')[0] === todayStr;
   }).length;
