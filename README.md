@@ -16,6 +16,7 @@ A Chrome extension for tracking job applications with gamification features to k
 - **Search & Filter**: Search applications by company or role
 - **Edit & Delete**: Manage your application history
 - **CSV Import/Export**: Back up and restore your data
+- **Clear All Data**: Reset all applications and stats with a confirmation prompt (in Danger Zone)
 
 ### 🎮 Gamification Features
 
@@ -101,6 +102,14 @@ A Chrome extension for tracking job applications with gamification features to k
 ### Import/Export Data
 - **Export**: Click "Export CSV" to download your application data
 - **Import**: Click "Import CSV" and select a previously exported file
+- Stats automatically update to accommodate imported applications
+
+### Clearing Data
+- Navigate to the "Stats" tab
+- Scroll to the "Danger Zone" section
+- Click "Clear All Data" to permanently delete all applications and reset stats
+- Your saved links will be preserved
+- A confirmation modal will appear before deletion
 
 ## Data Storage
 
@@ -123,6 +132,7 @@ Data syncs across your Chrome browsers when signed in to the same Google account
 - **Permissions**: storage, activeTab, scripting
 - **Content Scripts**: Injected on all URLs for floating button functionality
 - **Browser**: Chrome (Chromium-based browsers)
+- **UI/UX**: Custom modal system replaces native browser alerts for better styling and user experience
 
 ## Development
 
@@ -135,6 +145,7 @@ Job_Logger/
 ├── styles.css          # Styling
 ├── content.js          # Floating button & auto-extraction
 ├── content.css         # Floating button styling
+├── icons/              # Extension icons (16px, 48px, 128px)
 └── README.md           # Documentation
 ```
 
@@ -142,9 +153,19 @@ Job_Logger/
 - `loadData()`: Loads applications, links, and gamification state
 - `saveApplications()`: Saves applications to storage
 - `updateLevelAndXP()`: Calculates level, XP, and prestige
-- `updateStreak()`: Calculates consecutive day streak
+- `updateStreak()`: Calculates consecutive day streak with proper date handling
 - `calculateDailyBadge()`: Determines today's badge tier
 - `extractJobDetails()`: Auto-extracts job info from supported sites
+- `clearAllData()`: Resets all applications and gamification stats
+- `showCustomModal()`: Custom modal system for alerts, prompts, and confirmations
+
+## Recent Updates
+
+- ✅ **Custom Modal System**: Replaced native browser alerts with styled custom modals
+- ✅ **Clear All Data**: Added ability to reset applications and stats (Danger Zone)
+- ✅ **Extension Icons**: Added proper Chrome extension icons (16px, 48px, 128px)
+- ✅ **Streak Bug Fixes**: Improved streak calculation for accurate consecutive day tracking
+- ✅ **CSV Import Improvements**: Stats now properly recalculate when importing applications
 
 ## Future Enhancements
 
