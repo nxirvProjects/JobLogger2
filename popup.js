@@ -550,6 +550,14 @@ async function deleteLink(id) {
   saveLinks();
 }
 
+// Debug function to check gamification state
+window.debugGamification = function() {
+  console.log('Current gamification state:', gamification);
+  console.log('Last application date:', gamification.lastApplicationDate);
+  console.log('Current streak:', gamification.streak);
+  console.log('Longest streak:', gamification.longestStreak);
+};
+
 // Clear all data
 async function clearAllData() {
   const confirmed = await customConfirm('Are you sure you want to clear ALL data? This will delete all applications and reset your stats. Your saved links will remain. This action cannot be undone!');
@@ -589,12 +597,16 @@ function updateStreak() {
     return;
   }
 
-  // Get unique dates of applications (only the date part, ignore time)
+  // Get unique dates of applications (only the date part, ignore time) using LOCAL timezone
   const dates = applications.map(app => {
     const date = new Date(app.date);
     // Skip invalid dates
     if (isNaN(date.getTime())) return null;
-    return new Date(date.getFullYear(), date.getMonth(), date.getDate()).toISOString().split('T')[0];
+    // Extract local date components to avoid timezone issues
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   }).filter(d => d !== null).sort().reverse();
 
   const uniqueDates = [...new Set(dates)];
@@ -607,14 +619,18 @@ function updateStreak() {
   }
 
   const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const todayStr = today.toISOString().split('T')[0];
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, '0');
+  const day = String(today.getDate()).padStart(2, '0');
+  const todayStr = `${year}-${month}-${day}`;
 
   // Calculate CURRENT streak (from today backwards)
-  const mostRecentDate = new Date(uniqueDates[0]);
-  mostRecentDate.setHours(0, 0, 0, 0);
+  // Parse the most recent date string as local date
+  const [recentYear, recentMonth, recentDay] = uniqueDates[0].split('-').map(Number);
+  const mostRecentDate = new Date(recentYear, recentMonth - 1, recentDay);
+  const todayLocal = new Date(today.getFullYear(), today.getMonth(), today.getDate());
 
-  const daysDiff = Math.floor((today - mostRecentDate) / (1000 * 60 * 60 * 24));
+  const daysDiff = Math.floor((todayLocal - mostRecentDate) / (1000 * 60 * 60 * 24));
 
   let currentStreak = 0;
   // If last application was more than 1 day ago, current streak is broken
@@ -622,7 +638,7 @@ function updateStreak() {
     currentStreak = 0;
   } else {
     // Count consecutive days starting from today or yesterday
-    let currentDate = new Date(today);
+    let currentDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
 
     // If no app today, start checking from yesterday
     if (!uniqueDates.includes(todayStr)) {
@@ -630,7 +646,10 @@ function updateStreak() {
     }
 
     for (let i = 0; i < uniqueDates.length; i++) {
-      const checkDate = currentDate.toISOString().split('T')[0];
+      const cy = currentDate.getFullYear();
+      const cm = String(currentDate.getMonth() + 1).padStart(2, '0');
+      const cd = String(currentDate.getDate()).padStart(2, '0');
+      const checkDate = `${cy}-${cm}-${cd}`;
 
       if (uniqueDates.includes(checkDate)) {
         currentStreak++;
@@ -677,8 +696,11 @@ function updateStreak() {
 // Update streak when a new application is logged
 async function incrementStreak() {
   const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const todayStr = today.toISOString().split('T')[0];
+  // Get local date string in YYYY-MM-DD format without timezone conversion
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, '0');
+  const day = String(today.getDate()).padStart(2, '0');
+  const todayStr = `${year}-${month}-${day}`;
 
   if (!gamification.lastApplicationDate) {
     gamification.streak = 1;
@@ -689,16 +711,22 @@ async function incrementStreak() {
     }
     await saveGamification();
   } else {
+    // Parse the last application date and get local date string
     const lastDate = new Date(gamification.lastApplicationDate);
-    lastDate.setHours(0, 0, 0, 0);
-    const lastDateStr = lastDate.toISOString().split('T')[0];
+    const lastYear = lastDate.getFullYear();
+    const lastMonth = String(lastDate.getMonth() + 1).padStart(2, '0');
+    const lastDay = String(lastDate.getDate()).padStart(2, '0');
+    const lastDateStr = `${lastYear}-${lastMonth}-${lastDay}`;
 
     if (lastDateStr === todayStr) {
       // Already applied today, streak stays the same
       return;
     }
 
-    const daysDiff = Math.floor((today - lastDate) / (1000 * 60 * 60 * 24));
+    // Calculate day difference using local dates
+    const todayLocal = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const lastDateLocal = new Date(lastDate.getFullYear(), lastDate.getMonth(), lastDate.getDate());
+    const daysDiff = Math.floor((todayLocal - lastDateLocal) / (1000 * 60 * 60 * 24));
 
     if (daysDiff === 1) {
       // Consecutive day
