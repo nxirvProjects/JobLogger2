@@ -7,7 +7,8 @@ let gamification = {
   lastApplicationDate: null,
   level: 1,
   xp: 0,
-  prestige: 0
+  prestige: 0,
+  longestStreak: 0
 };
 
 // Custom Modal Functions
@@ -143,7 +144,7 @@ async function loadData() {
   const result = await chrome.storage.local.get(['applications', 'links', 'gamification', 'floatingButtonEnabled']);
   applications = result.applications || [];
   links = result.links || [];
-  gamification = result.gamification || { streak: 0, lastApplicationDate: null, level: 1, xp: 0, prestige: 0 };
+  gamification = result.gamification || { streak: 0, lastApplicationDate: null, level: 1, xp: 0, prestige: 0, longestStreak: 0 };
 
   // Calculate level and XP based on total applications
   updateLevelAndXP();
@@ -198,6 +199,12 @@ function setupEventListeners() {
 
   // Links actions
   document.getElementById('addLinkBtn').addEventListener('click', addNewLink);
+
+  // Clear data button (if exists)
+  const clearDataBtn = document.getElementById('clearDataBtn');
+  if (clearDataBtn) {
+    clearDataBtn.addEventListener('click', clearAllData);
+  }
 }
 
 // Tab switching
@@ -250,7 +257,7 @@ async function logCurrentJob() {
   };
 
   applications.unshift(application);
-  incrementStreak();
+  await incrementStreak();
   await saveApplications();
 }
 
@@ -384,6 +391,10 @@ async function importFromCSV(e) {
 
     // Recalculate level and XP based on new total
     updateLevelAndXP();
+
+    // Recalculate streak to find longest streak from imported data
+    updateStreak();
+
     await saveApplications();
     await saveGamification();
 
@@ -539,6 +550,34 @@ async function deleteLink(id) {
   saveLinks();
 }
 
+// Clear all data
+async function clearAllData() {
+  const confirmed = await customConfirm('Are you sure you want to clear ALL data? This will delete all applications and reset your stats. Your saved links will remain. This action cannot be undone!');
+  if (!confirmed) return;
+
+  // Reset applications and gamification only (keep links)
+  applications = [];
+  gamification = {
+    streak: 0,
+    lastApplicationDate: null,
+    level: 1,
+    xp: 0,
+    prestige: 0,
+    longestStreak: 0
+  };
+
+  // Save cleared data
+  await chrome.storage.local.set({ applications, gamification });
+
+  // Re-render everything
+  renderApplications();
+  updateStats();
+  updateStreak();
+  renderStats();
+
+  await customAlert('All applications and stats have been cleared successfully!');
+}
+
 // Gamification Functions
 
 // Update streak based on application dates
@@ -546,6 +585,7 @@ function updateStreak() {
   if (applications.length === 0) {
     gamification.streak = 0;
     gamification.lastApplicationDate = null;
+    gamification.longestStreak = 0;
     return;
   }
 
@@ -562,6 +602,7 @@ function updateStreak() {
   if (uniqueDates.length === 0) {
     gamification.streak = 0;
     gamification.lastApplicationDate = null;
+    gamification.longestStreak = 0;
     return;
   }
 
@@ -569,45 +610,72 @@ function updateStreak() {
   today.setHours(0, 0, 0, 0);
   const todayStr = today.toISOString().split('T')[0];
 
-  // Check if there's an application today or yesterday
+  // Calculate CURRENT streak (from today backwards)
   const mostRecentDate = new Date(uniqueDates[0]);
   mostRecentDate.setHours(0, 0, 0, 0);
 
   const daysDiff = Math.floor((today - mostRecentDate) / (1000 * 60 * 60 * 24));
 
-  // If last application was more than 1 day ago, streak is broken
+  let currentStreak = 0;
+  // If last application was more than 1 day ago, current streak is broken
   if (daysDiff > 1) {
-    gamification.streak = 0;
-    gamification.lastApplicationDate = uniqueDates[0];
-    return;
-  }
+    currentStreak = 0;
+  } else {
+    // Count consecutive days starting from today or yesterday
+    let currentDate = new Date(today);
 
-  // Count consecutive days starting from today or yesterday
-  let streak = 0;
-  let currentDate = new Date(today);
-
-  // If no app today, start checking from yesterday
-  if (!uniqueDates.includes(todayStr)) {
-    currentDate.setDate(currentDate.getDate() - 1);
-  }
-
-  for (let i = 0; i < uniqueDates.length; i++) {
-    const checkDate = currentDate.toISOString().split('T')[0];
-
-    if (uniqueDates.includes(checkDate)) {
-      streak++;
+    // If no app today, start checking from yesterday
+    if (!uniqueDates.includes(todayStr)) {
       currentDate.setDate(currentDate.getDate() - 1);
-    } else {
-      break;
+    }
+
+    for (let i = 0; i < uniqueDates.length; i++) {
+      const checkDate = currentDate.toISOString().split('T')[0];
+
+      if (uniqueDates.includes(checkDate)) {
+        currentStreak++;
+        currentDate.setDate(currentDate.getDate() - 1);
+      } else {
+        break;
+      }
     }
   }
 
-  gamification.streak = streak;
+  gamification.streak = currentStreak;
   gamification.lastApplicationDate = uniqueDates[0];
+
+  // Calculate LONGEST streak ever from all historical data
+  let maxStreak = 0;
+  let tempStreak = 1;
+
+  // Sort dates chronologically (oldest to newest) for streak calculation
+  const sortedDates = [...uniqueDates].sort();
+
+  for (let i = 1; i < sortedDates.length; i++) {
+    const prevDate = new Date(sortedDates[i - 1]);
+    const currDate = new Date(sortedDates[i]);
+
+    const diffDays = Math.floor((currDate - prevDate) / (1000 * 60 * 60 * 24));
+
+    if (diffDays === 1) {
+      // Consecutive day
+      tempStreak++;
+    } else {
+      // Streak broken, check if it was the longest
+      maxStreak = Math.max(maxStreak, tempStreak);
+      tempStreak = 1;
+    }
+  }
+
+  // Check the final streak
+  maxStreak = Math.max(maxStreak, tempStreak);
+
+  // Update longest streak only if we found a longer one
+  gamification.longestStreak = Math.max(maxStreak, gamification.longestStreak || 0);
 }
 
 // Update streak when a new application is logged
-function incrementStreak() {
+async function incrementStreak() {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const todayStr = today.toISOString().split('T')[0];
@@ -615,6 +683,11 @@ function incrementStreak() {
   if (!gamification.lastApplicationDate) {
     gamification.streak = 1;
     gamification.lastApplicationDate = todayStr;
+    // Update longest streak if current streak is higher
+    if (gamification.streak > (gamification.longestStreak || 0)) {
+      gamification.longestStreak = gamification.streak;
+    }
+    await saveGamification();
   } else {
     const lastDate = new Date(gamification.lastApplicationDate);
     lastDate.setHours(0, 0, 0, 0);
@@ -636,9 +709,14 @@ function incrementStreak() {
       gamification.streak = 1;
       gamification.lastApplicationDate = todayStr;
     }
-  }
 
-  saveGamification();
+    // Update longest streak if current streak is higher
+    if (gamification.streak > (gamification.longestStreak || 0)) {
+      gamification.longestStreak = gamification.streak;
+    }
+
+    await saveGamification();
+  }
 }
 
 // Render stats view
@@ -648,6 +726,12 @@ function renderStats() {
 
   if (streakCount) {
     streakCount.textContent = gamification.streak;
+  }
+
+  // Update longest streak display
+  const longestStreakEl = document.getElementById('longestStreak');
+  if (longestStreakEl) {
+    longestStreakEl.textContent = gamification.longestStreak || 0;
   }
 
   // Update fire icon size based on streak

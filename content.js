@@ -198,7 +198,7 @@ async function saveApplicationDirect(company, role, url) {
   // Get existing applications
   const result = await chrome.storage.local.get(['applications', 'gamification']);
   const applications = result.applications || [];
-  const gamification = result.gamification || { streak: 0, lastApplicationDate: null };
+  const gamification = result.gamification || { streak: 0, lastApplicationDate: null, level: 1, xp: 0, prestige: 0, longestStreak: 0 };
 
   // Add new application
   applications.unshift(application);
@@ -226,6 +226,11 @@ async function saveApplicationDirect(company, role, url) {
       }
       gamification.lastApplicationDate = todayStr;
     }
+  }
+
+  // Update longest streak if current streak is higher
+  if (gamification.streak > (gamification.longestStreak || 0)) {
+    gamification.longestStreak = gamification.streak;
   }
 
   // Save to storage
