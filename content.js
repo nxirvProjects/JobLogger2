@@ -492,3 +492,13 @@ function showNotification(company, role) {
     notification.classList.remove('show');
   }, 3000);
 }
+
+// Listen for storage changes to update floating button in real-time
+chrome.storage.onChanged.addListener((changes, areaName) => {
+  if (areaName !== 'local') return;
+
+  // If applications or gamification data changed, update the floating button appearance
+  if (changes.applications || changes.gamification) {
+    updateFloatingButtonAppearance();
+  }
+});

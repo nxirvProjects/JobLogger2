@@ -143,6 +143,16 @@ document.addEventListener('DOMContentLoaded', () => {
   setupEventListeners();
 });
 
+// Listen for storage changes from other contexts (content script, other popups)
+chrome.storage.onChanged.addListener((changes, areaName) => {
+  if (areaName !== 'local') return;
+
+  // Reload data when storage changes from external sources
+  if (changes.applications || changes.gamification || changes.links) {
+    loadData();
+  }
+});
+
 // Load data from chrome storage
 async function loadData() {
   const result = await chrome.storage.local.get(['applications', 'links', 'gamification', 'floatingButtonEnabled']);
