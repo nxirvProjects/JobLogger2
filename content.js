@@ -129,17 +129,17 @@ async function getDailyBadge() {
   };
 
   if (todayApps >= 15) {
-    badge = { name: 'Legendary', icon: '⚡', color: '#8b5cf6' };
+    badge = { name: 'Legendary', icon: '⚡', color: '#dc2626' }; // Sinister red
   } else if (todayApps >= 10) {
-    badge = { name: 'Diamond', icon: '💠', color: '#06b6d4' };
+    badge = { name: 'Diamond', icon: '💠', color: '#0891b2' }; // Dark cyan/blue
   } else if (todayApps >= 8) {
-    badge = { name: 'Platinum', icon: '💎', color: '#a855f7' };
+    badge = { name: 'Platinum', icon: '💎', color: '#06b6d4' }; // Light cyan/blue
   } else if (todayApps >= 5) {
-    badge = { name: 'Gold', icon: '🥇', color: '#eab308' };
+    badge = { name: 'Gold', icon: '🥇', color: '#eab308' }; // Gold yellow
   } else if (todayApps >= 3) {
-    badge = { name: 'Silver', icon: '🥈', color: '#94a3b8' };
+    badge = { name: 'Silver', icon: '🥈', color: '#94a3b8' }; // Silver gray
   } else if (todayApps >= 1) {
-    badge = { name: 'Bronze', icon: '🥉', color: '#c2410c' };
+    badge = { name: 'Bronze', icon: '🥉', color: '#c2410c' }; // Bronze orange
   }
 
   return { ...badge, count: todayApps };
@@ -154,16 +154,46 @@ async function updateFloatingButtonAppearance() {
   floatingButton.title = `Quick Log Job Application - ${badge.name} (${badge.count} today)`;
   floatingButton.style.backgroundColor = badge.color;
 
-  // Add glow effect for higher badges
-  if (badge.count >= 10) {
-    floatingButton.style.boxShadow = `0 4px 20px ${badge.color}80, 0 0 40px ${badge.color}40`;
-  } else if (badge.count >= 5) {
-    floatingButton.style.boxShadow = `0 4px 15px ${badge.color}60, 0 0 30px ${badge.color}30`;
-  } else if (badge.count >= 3) {
-    floatingButton.style.boxShadow = `0 4px 10px ${badge.color}40`;
-  } else {
-    floatingButton.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
+  // Create dynamic pulse animation with badge color
+  const styleId = 'job-logger-dynamic-pulse';
+  let styleElement = document.getElementById(styleId);
+
+  if (!styleElement) {
+    styleElement = document.createElement('style');
+    styleElement.id = styleId;
+    document.head.appendChild(styleElement);
   }
+
+  // Add glow intensity based on badge level
+  let glowIntensity = '0.3';
+  let glowSpread = '8px';
+
+  if (badge.count >= 10) {
+    glowIntensity = '0.5';
+    glowSpread = '16px';
+  } else if (badge.count >= 5) {
+    glowIntensity = '0.4';
+    glowSpread = '12px';
+  }
+
+  // Create custom pulse animation with badge color
+  styleElement.textContent = `
+    @keyframes badge-pulse {
+      0%, 100% {
+        transform: scale(1);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15),
+                    0 0 0 0 ${badge.color}${Math.round(glowIntensity * 255).toString(16).padStart(2, '0')};
+      }
+      50% {
+        transform: scale(1.05);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15),
+                    0 0 0 ${glowSpread} ${badge.color}00;
+      }
+    }
+    #job-logger-float-btn {
+      animation: badge-pulse 3s ease-in-out infinite !important;
+    }
+  `;
 }
 
 // Create the floating button

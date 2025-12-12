@@ -1186,17 +1186,17 @@ function calculateDailyBadge() {
   };
 
   if (todayApps >= 15) {
-    badge = { name: 'Legendary', icon: '⚡', color: '#8b5cf6' };
+    badge = { name: 'Legendary', icon: '⚡', color: '#dc2626' }; // Sinister red
   } else if (todayApps >= 10) {
-    badge = { name: 'Diamond', icon: '💠', color: '#06b6d4' };
+    badge = { name: 'Diamond', icon: '💠', color: '#0891b2' }; // Dark cyan/blue
   } else if (todayApps >= 8) {
-    badge = { name: 'Platinum', icon: '💎', color: '#a855f7' };
+    badge = { name: 'Platinum', icon: '💎', color: '#06b6d4' }; // Light cyan/blue
   } else if (todayApps >= 5) {
-    badge = { name: 'Gold', icon: '🥇', color: '#eab308' };
+    badge = { name: 'Gold', icon: '🥇', color: '#eab308' }; // Gold yellow
   } else if (todayApps >= 3) {
-    badge = { name: 'Silver', icon: '🥈', color: '#94a3b8' };
+    badge = { name: 'Silver', icon: '🥈', color: '#94a3b8' }; // Silver gray
   } else if (todayApps >= 1) {
-    badge = { name: 'Bronze', icon: '🥉', color: '#c2410c' };
+    badge = { name: 'Bronze', icon: '🥉', color: '#c2410c' }; // Bronze orange
   }
 
   return { ...badge, count: todayApps };
