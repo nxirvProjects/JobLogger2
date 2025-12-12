@@ -368,7 +368,21 @@ async function editApplication(id) {
 async function deleteApplication(id) {
   const confirmed = await customConfirm('Are you sure you want to delete this application?');
   if (!confirmed) return;
+
+  // Subtract XP for the deleted application (10 base XP)
+  gamification.totalXPEarned = Math.max(0, (gamification.totalXPEarned || 0) - 10);
+
+  // Add activity log entry
+  addActivityLog('xp_loss', 'Lost 10 XP (deleted application)', -10);
+
+  // Update level and XP
+  updateLevelAndXP();
+
+  // Remove the application
   applications = applications.filter(a => a.id !== id);
+
+  // Save everything
+  await saveGamification();
   saveApplications();
 }
 
@@ -851,6 +865,9 @@ function renderActivityLog() {
     if (entry.type === 'xp_gain') {
       icon = '✨';
       iconClass += ' activity-log-icon-xp';
+    } else if (entry.type === 'xp_loss') {
+      icon = '🗑️';
+      iconClass += ' activity-log-icon-penalty';
     } else if (entry.type === 'level_up') {
       icon = '🎉';
       iconClass += ' activity-log-icon-levelup';
