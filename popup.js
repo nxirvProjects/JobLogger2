@@ -8,7 +8,11 @@ let gamification = {
   level: 1,
   xp: 0,
   prestige: 0,
-  longestStreak: 0
+  longestStreak: 0,
+  totalXPEarned: 0, // Track total XP earned (not derived from apps)
+  weeklyStats: [], // Array of {weekStart: 'YYYY-MM-DD', appCount: number}
+  lastWeeklyCheck: null, // Last date weekly check was performed
+  activityLog: [] // Array of {timestamp: ISO, type: 'xp_gain'|'level_up'|'penalty', message: string, xpChange: number}
 };
 
 // Custom Modal Functions
@@ -144,10 +148,30 @@ async function loadData() {
   const result = await chrome.storage.local.get(['applications', 'links', 'gamification', 'floatingButtonEnabled']);
   applications = result.applications || [];
   links = result.links || [];
-  gamification = result.gamification || { streak: 0, lastApplicationDate: null, level: 1, xp: 0, prestige: 0, longestStreak: 0 };
+  gamification = result.gamification || {
+    streak: 0,
+    lastApplicationDate: null,
+    level: 1,
+    xp: 0,
+    prestige: 0,
+    longestStreak: 0,
+    totalXPEarned: 0,
+    weeklyStats: [],
+    lastWeeklyCheck: null,
+    activityLog: []
+  };
 
-  // Calculate level and XP based on total applications
+  // Migration: If totalXPEarned is 0 but we have applications, migrate old XP
+  if (gamification.totalXPEarned === 0 && applications.length > 0) {
+    gamification.totalXPEarned = applications.length * 10;
+    await saveGamification();
+  }
+
+  // Calculate level and XP based on totalXPEarned
   updateLevelAndXP();
+
+  // Check weekly average (penalties/bonuses)
+  await checkWeeklyAverage();
 
   // Set toggle state
   const toggle = document.getElementById('floatingButtonToggle');
@@ -186,6 +210,7 @@ function setupEventListeners() {
   document.getElementById('tabApplications').addEventListener('click', () => switchTab('applications'));
   document.getElementById('tabLinks').addEventListener('click', () => switchTab('links'));
   document.getElementById('tabStats').addEventListener('click', () => switchTab('stats'));
+  document.getElementById('tabSettings').addEventListener('click', () => switchTab('settings'));
 
   // Floating button toggle
   document.getElementById('floatingButtonToggle').addEventListener('change', toggleFloatingButton);
@@ -213,17 +238,21 @@ function switchTab(tab) {
   const appTab = document.getElementById('tabApplications');
   const linksTab = document.getElementById('tabLinks');
   const statsTab = document.getElementById('tabStats');
+  const settingsTab = document.getElementById('tabSettings');
   const appView = document.getElementById('applicationsView');
   const linksView = document.getElementById('linksView');
   const statsView = document.getElementById('statsView');
+  const settingsView = document.getElementById('settingsView');
 
   // Remove all active classes
   appTab.classList.remove('active');
   linksTab.classList.remove('active');
   statsTab.classList.remove('active');
+  settingsTab.classList.remove('active');
   appView.classList.add('hidden');
   linksView.classList.add('hidden');
   statsView.classList.add('hidden');
+  settingsView.classList.add('hidden');
 
   // Activate the selected tab
   if (tab === 'applications') {
@@ -235,6 +264,9 @@ function switchTab(tab) {
   } else if (tab === 'stats') {
     statsTab.classList.add('active');
     statsView.classList.remove('hidden');
+  } else if (tab === 'settings') {
+    settingsTab.classList.add('active');
+    settingsView.classList.remove('hidden');
   }
 }
 
@@ -258,6 +290,7 @@ async function logCurrentJob() {
 
   applications.unshift(application);
   await incrementStreak();
+  await awardXP(10, '1 application'); // Award 10 base XP with streak multiplier
   await saveApplications();
 }
 
@@ -571,7 +604,11 @@ async function clearAllData() {
     level: 1,
     xp: 0,
     prestige: 0,
-    longestStreak: 0
+    longestStreak: 0,
+    totalXPEarned: 0,
+    weeklyStats: [],
+    lastWeeklyCheck: null,
+    activityLog: []
   };
 
   // Save cleared data
@@ -787,6 +824,84 @@ function renderStats() {
 
   // Render daily badge
   renderDailyBadge();
+
+  // Render activity log
+  renderActivityLog();
+}
+
+// Render activity log
+function renderActivityLog() {
+  const container = document.getElementById('activityLogList');
+  if (!container) return;
+
+  const activityLog = gamification.activityLog || [];
+
+  if (activityLog.length === 0) {
+    container.innerHTML = '<p class="activity-log-empty">No activity yet. Start logging applications to see your progress!</p>';
+    return;
+  }
+
+  container.innerHTML = activityLog.map(entry => {
+    const date = new Date(entry.timestamp);
+    const timeAgo = getTimeAgo(date);
+
+    let iconClass = 'activity-log-icon';
+    let icon = '📊';
+
+    if (entry.type === 'xp_gain') {
+      icon = '✨';
+      iconClass += ' activity-log-icon-xp';
+    } else if (entry.type === 'level_up') {
+      icon = '🎉';
+      iconClass += ' activity-log-icon-levelup';
+    } else if (entry.type === 'penalty') {
+      icon = '⚠️';
+      iconClass += ' activity-log-icon-penalty';
+    } else if (entry.type === 'bonus') {
+      icon = '🎁';
+      iconClass += ' activity-log-icon-bonus';
+    }
+
+    let xpBadge = '';
+    if (entry.xpChange !== 0) {
+      const xpClass = entry.xpChange > 0 ? 'xp-positive' : 'xp-negative';
+      const xpSign = entry.xpChange > 0 ? '+' : '';
+      xpBadge = `<span class="activity-log-xp ${xpClass}">${xpSign}${entry.xpChange} XP</span>`;
+    }
+
+    return `
+      <div class="activity-log-entry">
+        <span class="${iconClass}">${icon}</span>
+        <div class="activity-log-content">
+          <p class="activity-log-message">${entry.message}</p>
+          <p class="activity-log-time">${timeAgo}</p>
+        </div>
+        ${xpBadge}
+      </div>
+    `;
+  }).join('');
+}
+
+// Helper to get "time ago" string
+function getTimeAgo(date) {
+  const now = new Date();
+  const seconds = Math.floor((now - date) / 1000);
+
+  if (seconds < 60) return 'Just now';
+
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days}d ago`;
+
+  const weeks = Math.floor(days / 7);
+  if (weeks < 4) return `${weeks}w ago`;
+
+  return date.toLocaleDateString();
 }
 
 // Calculate and render simple stats
@@ -847,10 +962,9 @@ async function toggleFloatingButton(e) {
 
 // Level and XP System
 
-// Calculate level and XP based on total applications
+// Calculate level and XP based on totalXPEarned
 function updateLevelAndXP() {
-  const totalApps = applications.length;
-  const totalXP = totalApps * 10; // 10 XP per application
+  const totalXP = gamification.totalXPEarned || 0;
 
   // Calculate prestige (every 5000 XP = 1 prestige, which is 500 apps or 50 levels)
   const prestige = Math.floor(totalXP / 5000);
@@ -860,9 +974,150 @@ function updateLevelAndXP() {
   const level = Math.floor(xpAfterPrestige / 100) + 1;
   const currentLevelXP = xpAfterPrestige % 100;
 
+  const oldLevel = gamification.level;
   gamification.prestige = prestige;
   gamification.level = level;
   gamification.xp = currentLevelXP;
+
+  // Check for level up and log it
+  if (oldLevel && level > oldLevel) {
+    addActivityLog('level_up', `Level up! Now Level ${level} - ${getLevelTitle(level)}`, 0);
+  }
+}
+
+// Get streak XP multiplier based on current streak
+function getStreakMultiplier() {
+  const streak = gamification.streak || 0;
+  if (streak >= 30) return 3.0;
+  if (streak >= 14) return 2.0;
+  if (streak >= 7) return 1.5;
+  return 1.0;
+}
+
+// Add activity to log (max 50 entries)
+function addActivityLog(type, message, xpChange) {
+  if (!gamification.activityLog) {
+    gamification.activityLog = [];
+  }
+
+  gamification.activityLog.unshift({
+    timestamp: new Date().toISOString(),
+    type: type,
+    message: message,
+    xpChange: xpChange
+  });
+
+  // Keep only last 50 entries
+  if (gamification.activityLog.length > 50) {
+    gamification.activityLog = gamification.activityLog.slice(0, 50);
+  }
+}
+
+// Award XP with streak multiplier
+async function awardXP(baseXP, reason = 'application') {
+  const multiplier = getStreakMultiplier();
+  const xpEarned = Math.floor(baseXP * multiplier);
+
+  gamification.totalXPEarned = (gamification.totalXPEarned || 0) + xpEarned;
+
+  // Create log message
+  let message = `Gained ${xpEarned} XP for ${reason}`;
+  if (multiplier > 1.0) {
+    message += ` (${multiplier}x streak bonus)`;
+  }
+
+  addActivityLog('xp_gain', message, xpEarned);
+  updateLevelAndXP();
+  await saveGamification();
+}
+
+// Get the start of the week (Monday) for a given date
+function getWeekStart(date) {
+  const d = new Date(date);
+  const day = d.getDay();
+  const diff = d.getDate() - day + (day === 0 ? -6 : 1); // Adjust when day is Sunday
+  const monday = new Date(d.setDate(diff));
+  monday.setHours(0, 0, 0, 0);
+  return monday.toISOString().split('T')[0];
+}
+
+// Check weekly average and apply penalty if needed
+async function checkWeeklyAverage() {
+  const today = new Date();
+  const todayStr = today.toISOString().split('T')[0];
+
+  // Initialize if needed
+  if (!gamification.weeklyStats) {
+    gamification.weeklyStats = [];
+  }
+
+  // Only check once per week (on Mondays)
+  if (gamification.lastWeeklyCheck) {
+    const lastCheck = new Date(gamification.lastWeeklyCheck);
+    const daysSinceCheck = Math.floor((today - lastCheck) / (1000 * 60 * 60 * 24));
+    if (daysSinceCheck < 7) {
+      return; // Already checked this week
+    }
+  }
+
+  // Update last check date
+  gamification.lastWeeklyCheck = todayStr;
+
+  // Calculate this week's app count
+  const thisWeekStart = getWeekStart(today);
+  const weekStartDate = new Date(thisWeekStart);
+  const thisWeekApps = applications.filter(app => {
+    const appDate = new Date(app.date);
+    return appDate >= weekStartDate;
+  }).length;
+
+  // Get last week's stats
+  const lastWeekStats = gamification.weeklyStats.length > 0 ?
+    gamification.weeklyStats[gamification.weeklyStats.length - 1] : null;
+
+  // Add this week's stats
+  gamification.weeklyStats.push({
+    weekStart: thisWeekStart,
+    appCount: thisWeekApps
+  });
+
+  // Keep only last 12 weeks
+  if (gamification.weeklyStats.length > 12) {
+    gamification.weeklyStats = gamification.weeklyStats.slice(-12);
+  }
+
+  // Check if average dropped compared to last week
+  if (lastWeekStats && thisWeekApps < lastWeekStats.appCount) {
+    const dropAmount = lastWeekStats.appCount - thisWeekApps;
+    // Penalty: lose 5 XP per app difference
+    const xpPenalty = dropAmount * 5;
+
+    gamification.totalXPEarned = Math.max(0, (gamification.totalXPEarned || 0) - xpPenalty);
+
+    addActivityLog(
+      'penalty',
+      `Weekly penalty: -${xpPenalty} XP (dropped from ${lastWeekStats.appCount} to ${thisWeekApps} apps/week)`,
+      -xpPenalty
+    );
+
+    updateLevelAndXP();
+  } else if (lastWeekStats && thisWeekApps > lastWeekStats.appCount) {
+    // Bonus for improvement!
+    const improvement = thisWeekApps - lastWeekStats.appCount;
+    const bonusXP = improvement * 3;
+
+    gamification.totalXPEarned = (gamification.totalXPEarned || 0) + bonusXP;
+
+    addActivityLog(
+      'bonus',
+      `Weekly bonus: +${bonusXP} XP (improved from ${lastWeekStats.appCount} to ${thisWeekApps} apps/week)`,
+      bonusXP
+    );
+
+    updateLevelAndXP();
+  }
+
+  await saveGamification();
 }
 
 // Get level title based on level number

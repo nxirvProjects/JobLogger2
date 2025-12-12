@@ -3,6 +3,80 @@
 let floatingButton = null;
 let isEnabled = false;
 
+// Helper functions for XP system
+function getStreakMultiplier(streak) {
+  if (streak >= 30) return 3.0;
+  if (streak >= 14) return 2.0;
+  if (streak >= 7) return 1.5;
+  return 1.0;
+}
+
+function addActivityLog(gamification, type, message, xpChange) {
+  if (!gamification.activityLog) {
+    gamification.activityLog = [];
+  }
+
+  gamification.activityLog.unshift({
+    timestamp: new Date().toISOString(),
+    type: type,
+    message: message,
+    xpChange: xpChange
+  });
+
+  // Keep only last 50 entries
+  if (gamification.activityLog.length > 50) {
+    gamification.activityLog = gamification.activityLog.slice(0, 50);
+  }
+}
+
+function updateLevelAndXP(gamification) {
+  const totalXP = gamification.totalXPEarned || 0;
+
+  // Calculate prestige (every 5000 XP = 1 prestige)
+  const prestige = Math.floor(totalXP / 5000);
+  const xpAfterPrestige = totalXP % 5000;
+
+  // Calculate level (100 XP per level)
+  const level = Math.floor(xpAfterPrestige / 100) + 1;
+  const currentLevelXP = xpAfterPrestige % 100;
+
+  const oldLevel = gamification.level;
+  gamification.prestige = prestige;
+  gamification.level = level;
+  gamification.xp = currentLevelXP;
+
+  // Check for level up and log it
+  if (oldLevel && level > oldLevel) {
+    const levelTitle = getLevelTitle(level);
+    addActivityLog(gamification, 'level_up', `Level up! Now Level ${level} - ${levelTitle}`, 0);
+  }
+}
+
+function getLevelTitle(level) {
+  if (level >= 50) return "Legendary Job Hunter";
+  if (level >= 30) return "Career Seeker Elite";
+  if (level >= 20) return "Application Master";
+  if (level >= 10) return "Job Search Pro";
+  if (level >= 5) return "Active Applicant";
+  return "Beginner Job Hunter";
+}
+
+function awardXP(gamification, baseXP, reason = 'application') {
+  const multiplier = getStreakMultiplier(gamification.streak || 0);
+  const xpEarned = Math.floor(baseXP * multiplier);
+
+  gamification.totalXPEarned = (gamification.totalXPEarned || 0) + xpEarned;
+
+  // Create log message
+  let message = `Gained ${xpEarned} XP for ${reason}`;
+  if (multiplier > 1.0) {
+    message += ` (${multiplier}x streak bonus)`;
+  }
+
+  addActivityLog(gamification, 'xp_gain', message, xpEarned);
+  updateLevelAndXP(gamification);
+}
+
 // Initialize on page load
 (async function init() {
   console.log('Job Logger content script loaded');
@@ -30,6 +104,68 @@ chrome.storage.onChanged.addListener((changes, namespace) => {
   }
 });
 
+// Get daily badge based on today's application count
+async function getDailyBadge() {
+  const result = await chrome.storage.local.get(['applications']);
+  const applications = result.applications || [];
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const todayStr = today.toISOString().split('T')[0];
+
+  // Count applications from today
+  const todayApps = applications.filter(app => {
+    const appDate = new Date(app.date);
+    if (isNaN(appDate.getTime())) return false;
+    appDate.setHours(0, 0, 0, 0);
+    return appDate.toISOString().split('T')[0] === todayStr;
+  }).length;
+
+  // Determine badge based on count
+  let badge = {
+    name: 'No Badge Yet',
+    icon: '📝',
+    color: '#9ca3af'
+  };
+
+  if (todayApps >= 15) {
+    badge = { name: 'Legendary', icon: '⚡', color: '#8b5cf6' };
+  } else if (todayApps >= 10) {
+    badge = { name: 'Diamond', icon: '💠', color: '#06b6d4' };
+  } else if (todayApps >= 8) {
+    badge = { name: 'Platinum', icon: '💎', color: '#a855f7' };
+  } else if (todayApps >= 5) {
+    badge = { name: 'Gold', icon: '🥇', color: '#eab308' };
+  } else if (todayApps >= 3) {
+    badge = { name: 'Silver', icon: '🥈', color: '#94a3b8' };
+  } else if (todayApps >= 1) {
+    badge = { name: 'Bronze', icon: '🥉', color: '#c2410c' };
+  }
+
+  return { ...badge, count: todayApps };
+}
+
+// Update floating button appearance based on daily badge
+async function updateFloatingButtonAppearance() {
+  if (!floatingButton) return;
+
+  const badge = await getDailyBadge();
+  floatingButton.innerHTML = badge.icon;
+  floatingButton.title = `Quick Log Job Application - ${badge.name} (${badge.count} today)`;
+  floatingButton.style.backgroundColor = badge.color;
+
+  // Add glow effect for higher badges
+  if (badge.count >= 10) {
+    floatingButton.style.boxShadow = `0 4px 20px ${badge.color}80, 0 0 40px ${badge.color}40`;
+  } else if (badge.count >= 5) {
+    floatingButton.style.boxShadow = `0 4px 15px ${badge.color}60, 0 0 30px ${badge.color}30`;
+  } else if (badge.count >= 3) {
+    floatingButton.style.boxShadow = `0 4px 10px ${badge.color}40`;
+  } else {
+    floatingButton.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
+  }
+}
+
 // Create the floating button
 function createFloatingButton() {
   // Don't create if already exists
@@ -42,6 +178,9 @@ function createFloatingButton() {
   floatingButton.addEventListener('click', handleQuickLog);
 
   document.body.appendChild(floatingButton);
+
+  // Update appearance based on daily badge
+  updateFloatingButtonAppearance();
 }
 
 // Remove the floating button
@@ -198,43 +337,79 @@ async function saveApplicationDirect(company, role, url) {
   // Get existing applications
   const result = await chrome.storage.local.get(['applications', 'gamification']);
   const applications = result.applications || [];
-  const gamification = result.gamification || { streak: 0, lastApplicationDate: null, level: 1, xp: 0, prestige: 0, longestStreak: 0 };
+  const gamification = result.gamification || {
+    streak: 0,
+    lastApplicationDate: null,
+    level: 1,
+    xp: 0,
+    prestige: 0,
+    longestStreak: 0,
+    totalXPEarned: 0,
+    weeklyStats: [],
+    lastWeeklyCheck: null,
+    activityLog: []
+  };
 
   // Add new application
   applications.unshift(application);
 
   // Update streak
   const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const todayStr = today.toISOString().split('T')[0];
+  // Get local date string in YYYY-MM-DD format without timezone conversion
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, '0');
+  const day = String(today.getDate()).padStart(2, '0');
+  const todayStr = `${year}-${month}-${day}`;
 
   if (!gamification.lastApplicationDate) {
     gamification.streak = 1;
     gamification.lastApplicationDate = todayStr;
+    // Update longest streak if current streak is higher
+    if (gamification.streak > (gamification.longestStreak || 0)) {
+      gamification.longestStreak = gamification.streak;
+    }
   } else {
+    // Parse the last application date and get local date string
     const lastDate = new Date(gamification.lastApplicationDate);
-    lastDate.setHours(0, 0, 0, 0);
-    const lastDateStr = lastDate.toISOString().split('T')[0];
+    const lastYear = lastDate.getFullYear();
+    const lastMonth = String(lastDate.getMonth() + 1).padStart(2, '0');
+    const lastDay = String(lastDate.getDate()).padStart(2, '0');
+    const lastDateStr = `${lastYear}-${lastMonth}-${lastDay}`;
 
-    if (lastDateStr !== todayStr) {
-      const daysDiff = Math.floor((today - lastDate) / (1000 * 60 * 60 * 24));
+    if (lastDateStr === todayStr) {
+      // Already applied today, streak stays the same
+      // DO NOT update longestStreak here - no change to current streak
+      // This prevents the bug where filling in missing fields increments longestStreak
+    } else {
+      // Calculate day difference using local dates
+      const todayLocal = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+      const lastDateLocal = new Date(lastDate.getFullYear(), lastDate.getMonth(), lastDate.getDate());
+      const daysDiff = Math.floor((todayLocal - lastDateLocal) / (1000 * 60 * 60 * 24));
 
       if (daysDiff === 1) {
+        // Consecutive day
         gamification.streak++;
       } else if (daysDiff > 1) {
+        // Streak broken, restart
         gamification.streak = 1;
       }
       gamification.lastApplicationDate = todayStr;
+
+      // Update longest streak if current streak is higher
+      if (gamification.streak > (gamification.longestStreak || 0)) {
+        gamification.longestStreak = gamification.streak;
+      }
     }
   }
 
-  // Update longest streak if current streak is higher
-  if (gamification.streak > (gamification.longestStreak || 0)) {
-    gamification.longestStreak = gamification.streak;
-  }
+  // Award XP with streak multiplier
+  awardXP(gamification, 10, '1 application');
 
   // Save to storage
   await chrome.storage.local.set({ applications, gamification });
+
+  // Update floating button appearance
+  await updateFloatingButtonAppearance();
 
   // Show success notification
   showNotification(company, role);

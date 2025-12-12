@@ -27,21 +27,12 @@
       <button id="tabApplications" class="tab active">Applications</button>
       <button id="tabLinks" class="tab">My Links</button>
       <button id="tabStats" class="tab">Stats</button>
+      <button id="tabSettings" class="tab">Settings</button>
     </div>
   </div>
 
   <!-- Applications View -->
   <div id="applicationsView" class="content">
-    <!-- Quick Log Toggle -->
-    <div class="toggle-container">
-      <label class="toggle-label">
-        <input type="checkbox" id="floatingButtonToggle" class="toggle-input">
-        <span class="toggle-slider"></span>
-        <span class="toggle-text">Quick Log Button</span>
-      </label>
-      <p class="toggle-description">Show floating button on all pages for quick logging</p>
-    </div>
-
     <!-- Action Buttons -->
     <div class="button-row">
       <button id="logCurrentBtn" class="btn btn-primary">+ Log Current</button>
@@ -143,6 +134,33 @@
           <p class="stat-label">Total</p>
           <p class="stat-value" id="statsTotal">0</p>
         </div>
+      </div>
+    </div>
+
+    <!-- Activity Log -->
+    <div class="stat-card activity-log-card">
+      <h3 class="stats-title">Activity Log</h3>
+      <p class="activity-log-subtitle">Recent XP gains, penalties, and level ups</p>
+      <div id="activityLogList" class="activity-log-list">
+        <!-- Activity log entries will be inserted here -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Settings View -->
+  <div id="settingsView" class="content hidden">
+    <h2 class="section-header">Settings</h2>
+
+    <!-- Quick Log Toggle -->
+    <div class="settings-section">
+      <h3 class="settings-section-title">Quick Log Button</h3>
+      <div class="toggle-container">
+        <label class="toggle-label">
+          <input type="checkbox" id="floatingButtonToggle" class="toggle-input">
+          <span class="toggle-slider"></span>
+          <span class="toggle-text">Enable floating button</span>
+        </label>
+        <p class="toggle-description">Show floating button on all pages for quick logging. The button icon and color changes based on your daily rank!</p>
       </div>
     </div>
 
