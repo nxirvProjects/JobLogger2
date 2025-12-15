@@ -446,6 +446,9 @@ async function importFromCSV(e) {
       }
     }
 
+    // Award XP for each imported application (10 XP per app, no streak multiplier for imports)
+    gamification.totalXPEarned = (gamification.totalXPEarned || 0) + (validCount * 10);
+
     // Recalculate level and XP based on new total
     updateLevelAndXP();
 
