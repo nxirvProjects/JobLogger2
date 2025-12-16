@@ -290,12 +290,17 @@ async function logCurrentJob() {
   const role = await customPrompt('Role/Job title:');
   if (!role) return;
 
+  // Calculate XP with streak multiplier
+  const multiplier = getStreakMultiplier();
+  const xpEarned = Math.floor(10 * multiplier);
+
   const application = {
     id: Date.now(),
     company,
     role,
     url: tab.url,
-    date: new Date().toISOString()
+    date: new Date().toISOString(),
+    xpEarned: xpEarned // Store XP earned for this application
   };
 
   applications.unshift(application);
@@ -379,11 +384,18 @@ async function deleteApplication(id) {
   const confirmed = await customConfirm('Are you sure you want to delete this application?');
   if (!confirmed) return;
 
-  // Subtract XP for the deleted application (10 base XP)
-  gamification.totalXPEarned = Math.max(0, (gamification.totalXPEarned || 0) - 10);
+  // Find the application to get its XP value
+  const app = applications.find(a => a.id === id);
+  if (!app) return;
+
+  // Get the XP that was earned for this application (default to 10 for old apps without xpEarned)
+  const xpToSubtract = app.xpEarned || 10;
+
+  // Subtract XP for the deleted application
+  gamification.totalXPEarned = Math.max(0, (gamification.totalXPEarned || 0) - xpToSubtract);
 
   // Add activity log entry
-  addActivityLog('xp_loss', 'Lost 10 XP (deleted application)', -10);
+  addActivityLog('xp_loss', `Lost ${xpToSubtract} XP (deleted application)`, -xpToSubtract);
 
   // Update level and XP
   updateLevelAndXP();
@@ -418,8 +430,9 @@ async function importFromCSV(e) {
 
     let validCount = 0;
     let invalidCount = 0;
+    const tempApps = []; // Store apps temporarily
 
-    // Skip header row
+    // Skip header row and parse all applications first
     for (let i = 1; i < lines.length; i++) {
       // Better CSV parsing that handles quoted fields
       const parts = parseCSVLine(lines[i]);
@@ -435,7 +448,7 @@ async function importFromCSV(e) {
           continue;
         }
 
-        applications.push({
+        tempApps.push({
           id: Date.now() + i,
           company: parts[0]?.trim() || '',
           role: parts[1]?.trim() || '',
@@ -446,8 +459,58 @@ async function importFromCSV(e) {
       }
     }
 
-    // Award XP for each imported application (10 XP per app, no streak multiplier for imports)
-    gamification.totalXPEarned = (gamification.totalXPEarned || 0) + (validCount * 10);
+    // Sort by date (oldest first) to calculate streaks chronologically
+    tempApps.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+    let totalXPAwarded = 0;
+    let currentStreak = 0;
+    let lastAppDate = null;
+
+    // Calculate XP for each app based on the streak at the time it was logged
+    for (const app of tempApps) {
+      const appDate = new Date(app.date);
+      const year = appDate.getFullYear();
+      const month = String(appDate.getMonth() + 1).padStart(2, '0');
+      const day = String(appDate.getDate()).padStart(2, '0');
+      const appDateStr = `${year}-${month}-${day}`;
+
+      // Calculate streak for this application
+      if (!lastAppDate) {
+        currentStreak = 1;
+      } else if (lastAppDate === appDateStr) {
+        // Same day, streak stays the same
+      } else {
+        const lastDate = new Date(lastAppDate);
+        const currentDate = new Date(appDateStr);
+        const daysDiff = Math.floor((currentDate - lastDate) / (1000 * 60 * 60 * 24));
+
+        if (daysDiff === 1) {
+          // Consecutive day
+          currentStreak++;
+        } else if (daysDiff > 1) {
+          // Streak broken
+          currentStreak = 1;
+        }
+      }
+
+      lastAppDate = appDateStr;
+
+      // Calculate multiplier based on streak at time of this app
+      let multiplier = 1.0;
+      if (currentStreak >= 30) multiplier = 3.0;
+      else if (currentStreak >= 14) multiplier = 2.0;
+      else if (currentStreak >= 7) multiplier = 1.5;
+
+      const xpEarned = Math.floor(10 * multiplier);
+      app.xpEarned = xpEarned;
+      totalXPAwarded += xpEarned;
+    }
+
+    // Add all applications to the main array
+    applications.push(...tempApps);
+
+    // Award total XP calculated from historical streaks
+    gamification.totalXPEarned = (gamification.totalXPEarned || 0) + totalXPAwarded;
 
     // Recalculate level and XP based on new total
     updateLevelAndXP();

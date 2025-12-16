@@ -355,15 +355,6 @@ function closeModal() {
 
 // Save application directly without modal
 async function saveApplicationDirect(company, role, url) {
-  // Create application object
-  const application = {
-    id: Date.now(),
-    company,
-    role,
-    url,
-    date: new Date().toISOString()
-  };
-
   // Get existing applications
   const result = await chrome.storage.local.get(['applications', 'gamification']);
   const applications = result.applications || [];
@@ -378,6 +369,20 @@ async function saveApplicationDirect(company, role, url) {
     weeklyStats: [],
     lastWeeklyCheck: null,
     activityLog: []
+  };
+
+  // Calculate XP with streak multiplier BEFORE adding the application
+  const multiplier = getStreakMultiplier(gamification.streak || 0);
+  const xpEarned = Math.floor(10 * multiplier);
+
+  // Create application object with XP earned
+  const application = {
+    id: Date.now(),
+    company,
+    role,
+    url,
+    date: new Date().toISOString(),
+    xpEarned: xpEarned // Store XP earned for this application
   };
 
   // Add new application
